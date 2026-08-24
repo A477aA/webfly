@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>webfly — воздушный бой</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app"></div>
+<canvas id="overlay"></canvas>
+<div id="hud">
+  <div class="panel" id="speed"><div class="label" data-i18n="hSpeed">СКОРОСТЬ</div>
+    <div><span class="val" id="v-spd">0</span><span class="unit">км/ч</span></div>
+    <div class="label" id="v-ms" style="margin-top:2px">0 м/с</div></div>
+  <div class="panel" id="alt"><div class="label" data-i18n="hAlt">ВЫСОТА</div>
+    <div><span class="val" id="v-alt">0</span><span class="unit">м</span></div></div>
+  <div class="panel" id="vsi"><div class="label" data-i18n="hVs">ВЕРТ. СКОР.</div>
+    <div><span class="val" id="v-vsi" style="font-size:20px">0</span><span class="unit">м/с</span></div></div>
+
+  <!-- союзники · счёт · враги — вверху по центру -->
+  <div class="panel" id="scoretop">
+    <div class="topline">
+      <div class="side"><div class="label" data-i18n="hAllies">СОЮЗНИКИ</div><div class="sideval ally" id="v-allies">0</div></div>
+      <div class="mid"><div class="label" data-i18n="hScore">СЧЁТ</div><div class="scoreval" id="v-score">0</div>
+        <div class="label"><span data-i18n="hHdg">КУРС</span> <span id="v-hdg" style="color:#fff">000</span></div></div>
+      <div class="side"><div class="label" data-i18n="hEnemies">ВРАГИ</div><div class="sideval foe" id="v-enemies">0</div></div>
+    </div>
+  </div>
+
+  <!-- задачи — слева вверху -->
+  <div class="panel" id="combat">
+    <div class="label tasks-h" data-i18n="hTasks">ЗАДАЧИ</div>
+    <div id="objlist" style="margin-top:4px"></div>
+  </div>
+
+  <!-- борт, HP и тяга — слева внизу, крупно -->
+  <div class="panel" id="status">
+    <div class="ac-name" data-i18n="acName">Су-27 «ФЛАНКЕР»</div>
+    <div class="bar-row"><span class="bar-lbl" data-i18n="hHp">ПРОЧНОСТЬ</span><div class="bar"><div id="hpfill" class="fill"></div></div></div>
+    <div class="bar-row"><span class="bar-lbl" data-i18n="hThr">ТЯГА</span><div class="bar"><div id="thfill" class="fill th"></div><span id="v-th" class="bar-num">0%</span></div></div>
+    <div class="status-sub"><span data-i18n="hRepair">РЕМНАБОР</span> <kbd>H</kbd> · <span id="v-repair" style="color:#6bffb0">готов</span></div>
+  </div>
+
+  <!-- выбор оружия иконками — внизу по центру -->
+  <div class="panel" id="weaponbar">
+    <div id="wslots"></div>
+    <div class="wlock"><span id="v-lock" style="color:#2f8a5c"></span></div>
+    
+  </div>
+
+  <div id="stall">⚠ <span data-i18n="hStall">СВАЛИВАНИЕ</span></div>
+  <div id="msg"></div>
+  <div id="mslwarn"><div class="mw-sign">⚠</div><div class="mw-txt" data-i18n="warnMissile">РАКЕТА</div><div class="mw-sub" id="v-mslwarn"></div></div>
+</div>
+</div>
+
+<div id="startgate">
+  <div class="tag" data-i18n="tag">WEBFLY · ВОЗДУШНЫЙ БОЙ</div>
+  <h1 data-i18n="title">Операция «Фланкер»</h1>
+  <p data-i18n="intro">Су-27 в бою…</p>
+  <div id="settings">
+    <div class="settings-hint" data-i18n="settingsHint">наведи курсор на название — покажу, что делает настройка</div>
+    <div class="srow">
+      <label data-i18n="sLang" data-i18n-tip="tLang">Язык</label>
+      <div class="seg" id="set-lang"><button data-v="ru" class="on">Русский</button><button data-v="en">English</button></div>
+    </div>
+    <div class="srow">
+      <label data-i18n="sSens" data-i18n-tip="tSens">Чувствительность мыши</label>
+      <input type="range" id="set-sens" min="0.4" max="3" step="0.05" value="1.35">
+      <span id="set-sens-val">1.35</span>
+    </div>
+    <div class="srow">
+      <label data-i18n="sDiff" data-i18n-tip="tDiff">Сложность</label>
+      <div class="seg" id="set-diff">
+        <button data-v="easy" data-i18n="dEasy">Лёгкая</button>
+        <button data-v="normal" class="on" data-i18n="dNormal">Обычная</button>
+        <button data-v="hard" data-i18n="dHard">Тяжёлая</button>
+      </div>
+    </div>
+    <div class="srow">
+      <label data-i18n="sAllies" data-i18n-tip="tAllies">Союзники</label>
+      <div class="seg" id="set-allies">
+        <button data-v="0">0</button><button data-v="1">1</button>
+        <button data-v="2" class="on">2</button><button data-v="3">3</button><button data-v="4">4</button>
+      </div>
+    </div>
+    <div class="srow">
+      <label data-i18n="sEnemies" data-i18n-tip="tEnemies">Количество врагов</label>
+      <div class="seg" id="set-enemies">
+        <button data-v="1" class="on">×1</button><button data-v="1.5">×1.5</button><button data-v="2">×2</button><button data-v="3">×3</button>
+      </div>
+    </div>
+    <div class="srow">
+      <label data-i18n="sMission" data-i18n-tip="tMission">Режим миссии</label>
+      <div class="seg" id="set-mission">
+        <button data-v="battle" class="on" data-i18n="mBattle">Бой</button>
+        <button data-v="passive" data-i18n="mPassive">Не атакуют</button>
+        <button data-v="free" data-i18n="mFree">Свободный полёт</button>
+      </div>
+    </div>
+    <div class="srow">
+      <label data-i18n="sCtrl" data-i18n-tip="tCtrl">Режим управления</label>
+      <div class="seg" id="set-ctrl">
+        <button data-v="arcade" class="on" data-i18n="cArcade">Простое</button>
+        <button data-v="direct" data-i18n="cExpert">Продвинутое</button>
+      </div>
+    </div>
+    <div class="srow">
+      <label data-i18n="sLock" data-i18n-tip="tLock">Метка захвата</label>
+      <div class="seg" id="set-lock">
+        <button data-v="bold" class="on" data-i18n="lkBold">Жирная</button>
+        <button data-v="simple" data-i18n="lkSimple">Обычная</button>
+        <button data-v="brackets" data-i18n="lkBrackets">Скобки</button>
+        <button data-v="diamond" data-i18n="lkDiamond">Ромб</button>
+        <button data-v="reticle" data-i18n="lkReticle">Кольцо</button>
+      </div>
+    </div>
+    <div class="srow" style="justify-content:center">
+      <canvas id="lockpreview" width="290" height="86"></canvas>
+    </div>
+    <div class="srow">
+      <label data-i18n="sVol" data-i18n-tip="tVol">Громкость</label>
+      <input type="range" id="set-vol" min="0" max="1" step="0.05" value="0.55">
+      <span id="set-vol-val">55%</span>
+    </div>
+    <div class="srow">
+      <label data-i18n="sGunAssist" data-i18n-tip="tGunAssist">Доводка пушки мышью</label>
+      <button id="set-gun" class="toggle on">ВКЛ</button>
+    </div>
+    <div class="srow">
+      <label data-i18n="sInvert" data-i18n-tip="tInvert">Инверсия тангажа (мышь)</label>
+      <button id="set-invert" class="toggle">ВЫКЛ</button>
+    </div>
+    <div class="srow">
+      <label data-i18n="sMouse" data-i18n-tip="tMouse">Управление мышью</label>
+      <button id="set-mouse" class="toggle on">ВКЛ</button>
+    </div>
+  </div>
+  <div id="keyhelp">
+    <div><kbd>Мышь</kbd> <span data-i18n="kMouse">манёвр</span> · <kbd>ЛКМ</kbd> <span data-i18n="kGun">пушка</span> · <kbd>ПКМ</kbd> <span data-i18n="kMsl">ракета</span></div>
+    <div><kbd>W/S</kbd> <span data-i18n="kPitch">тангаж</span> · <kbd>A/D</kbd> <span data-i18n="kRoll">крен</span> · <kbd>Q/E</kbd> <span data-i18n="kYaw">рыскание</span></div>
+    <div><kbd>Shift/Ctrl</kbd> <span data-i18n="kThr">тяга</span> · <kbd>B</kbd> <span data-i18n="kBomb">бомба</span> · <kbd>H</kbd> <span data-i18n="kRep">ремонт</span></div>
+    <div><kbd>1..5</kbd> <span data-i18n="kSel">выбор ракеты</span> · <kbd>F</kbd> <span data-i18n="kFire">пуск</span> · <kbd>X</kbd> <span data-i18n="kFlare">ловушки</span></div>
+    <div><kbd>T</kbd> <span data-i18n="kTarget">выбор цели</span> · <kbd>Y</kbd> <span data-i18n="kLook">смотреть на цель</span> · <kbd>N</kbd> <span data-i18n="kRadar">радар</span></div>
+    <div><kbd>G</kbd> <span data-i18n="kFlaps">закрылки</span> · <kbd>V</kbd> <span data-i18n="kCam">камера: облёт / кабина / дальний</span> · <kbd>Esc</kbd> <span data-i18n="kPause">пауза</span></div>
+    <div><kbd>O</kbd> <span data-i18n="kBack">взгляд назад</span> · <kbd>U</kbd> <span data-i18n="kDev">режим разработчика</span></div>
+    <div><kbd>M</kbd> <span data-i18n="kMouseTgl">мышь вкл/выкл</span> · <kbd>R</kbd> <span data-i18n="kRestart">рестарт</span> · <kbd>Z/C</kbd> <span data-i18n="kYaw">рыскание</span></div>
+  </div>
+  <div style="display:flex;gap:14px">
+    <button class="cta" id="resumebtn" data-i18n="resume" style="display:none">ПРОДОЛЖИТЬ →</button>
+    <button class="cta" id="startbtn" data-i18n="start">НА ЗАДАНИЕ →</button>
+  </div>
+</div>
+<div id="overmsg">
+  <div class="tag" data-i18n="failTag">ЗАДАНИЕ ПРОВАЛЕНО</div>
+  <h1 id="over-title">СБИТ</h1>
+  <p id="over-sub"></p>
+  <div style="display:flex;gap:14px">
+    <button class="cta" id="restartbtn" data-i18n="again" style="border-color:var(--red);color:var(--red)">ЗАНОВО →</button>
+    <button class="cta" id="over-settings" data-i18n="toSettings" style="border-color:var(--hud-dim);color:var(--hud-dim)">⚙ Настройки</button>
+  </div>
+</div>
+<div id="winmsg">
+  <div class="tag" data-i18n="winTag">ЗАДАНИЕ ВЫПОЛНЕНО</div>
+  <h1 data-i18n="winTitle">ПОБЕДА</h1>
+  <p id="win-sub"></p>
+  <div style="display:flex;gap:14px">
+    <button class="cta" id="winbtn" data-i18n="once">ЕЩЁ РАЗ →</button>
+    <button class="cta" id="win-settings" data-i18n="toSettings" style="border-color:var(--hud-dim);color:var(--hud-dim)">⚙ Настройки</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/MaskPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/GammaCorrectionShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+<script src="js/data.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/sound.js"></script>
+<script src="js/config.js"></script>
+<script src="js/util.js"></script>
+<script src="js/mathutil.js"></script>
+<script src="js/textures.js"></script>
+<script src="js/build.js"></script>
+<script src="js/world.js"></script>
+<script src="js/effects.js"></script>
+<script src="js/weapons.js"></script>
+<script src="js/entities.js"></script>
+<script src="js/physics.js"></script>
+<script src="js/hud.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
