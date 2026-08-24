@@ -2,7 +2,7 @@
 
 [Русский](README.md) · **English**
 
-**[▶ Play online](http://193.233.216.107/)** — runs straight in the browser, nothing to install.
+**[▶ Play online](https://a477aa.github.io/webfly/)** · [self-hosted mirror](http://193.233.216.107/)
 
 An arcade 3D flight simulator built around the **Su-27 Flanker**: flight dynamics,
 dogfighting AI, five types of guided missiles, bombing with a ballistic sight, ground
